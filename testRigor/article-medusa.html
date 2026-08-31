@@ -1,0 +1,603 @@
+[raw]
+<div class="single-top-line-ad">Turn your manual testers into <span class="text-red">automation experts</span> <a class="btn btn-outline-danger" href="/request-demo/">Request a Demo</a><a class="btn btn-danger" href="/sign-up/">Start testRigor Free</a></div>
+<div class="article-white-block pb-20">
+<h1 class="mb-30">Medusa Testing</h1>
+[/raw]
+<div class="mb-30"><img class="alignnone" style="width: 100%; max-width: 550px;" src="https://user-images.githubusercontent.com/59018053/229103726-e5b529a3-9b3f-4970-8a1f-c6af37f087bf.svg" alt="Medusa Testing" /></div>
+<a title="Medusa" href="https://www.medusajs.com/" target="_blank" rel="nofollow noopener noreferrer">Medusa</a> is a free, open-source, headless commerce platform for building ecommerce stores, marketplaces, and other digital commerce applications. It ships commerce modules (products, carts, orders, payments, promotions, customers, and more) plus tools to customize them without reinventing core commerce logic.
+
+The Medusa application used in this project is the <a title="Medusa DTC Starter" href="https://github.com/medusajs/dtc-starter" target="_blank" rel="nofollow noopener noreferrer">DTC starter</a>: a production-ready monorepo with a Medusa backend and a Next.js storefront. Typical local URLs are:
+
+<ul class="mb-30">
+ 	<li><strong>Storefront:</strong> <code>http://localhost:8000</code></li>
+ 	<li><strong>Admin dashboard:</strong> <code>http://localhost:9000/app</code></li>
+ 	<li><strong>Backend API:</strong> <code>http://localhost:9000</code></li>
+</ul>
+
+Medusa is built on <a title="Node.js" href="https://nodejs.org/" target="_blank" rel="nofollow noopener noreferrer">Node.js</a> and TypeScript. The server is Express-based, PostgreSQL is the datastore, and clients (storefront, admin, custom apps) talk to Medusa through HTTP API routes. A request typically flows through four layers:
+
+<ol class="mb-30">
+ 	<li><a title="API Routes" href="https://docs.medusajs.com/learn/fundamentals/api-routes" target="_blank" rel="nofollow noopener noreferrer">API routes</a> (HTTP entry point)</li>
+ 	<li><a title="Workflows" href="https://docs.medusajs.com/learn/fundamentals/workflows" target="_blank" rel="nofollow noopener noreferrer">Workflows</a> (opinionated business logic)</li>
+ 	<li><a title="Modules" href="https://docs.medusajs.com/learn/fundamentals/modules" target="_blank" rel="nofollow noopener noreferrer">Modules</a> (domain services and data models)</li>
+ 	<li>PostgreSQL (and optional Redis, file storage, and other infrastructure)</li>
+</ol>
+
+You can customize the following in a Medusa project:
+
+<ul class="mb-30">
+ 	<li><a title="Commerce Modules" href="https://docs.medusajs.com/resources/commerce-modules" target="_blank" rel="nofollow noopener noreferrer">Commerce modules</a> and custom modules</li>
+ 	<li>Workflows, API routes, subscribers, and scheduled jobs</li>
+ 	<li>The Medusa Admin (widgets, routes, and UI extensions)</li>
+ 	<li>The Next.js storefront (catalog, cart, checkout, customer accounts)</li>
+ 	<li>Plugins and third-party integrations (payments, fulfillment, CMS, ERP)</li>
+</ul>
+
+A default catalog, checkout, customer accounts, and admin dashboard are included in the starter. Further customizations live under <code>apps/backend/src</code> (API routes, modules, workflows, admin) and <code>apps/storefront</code> (storefront UI).
+
+According to the <a title="Test Automation Pyramid" href="https://testrigor.com/blog/test-automation-pyramid-done-right/">testing pyramid</a>, you can test your Medusa application through
+
+<ul class="mb-30 font-bold">
+ 	<li><a href="#unitTesting">Unit testing</a></li>
+ 	<li><a href="#integrationTesting">Integration testing</a></li>
+ 	<li><a href="#endToEndTesting">End-to-end testing</a></li>
+</ul>
+
+<h2 id="unitTesting" class="mt-30 mb-30">Unit Testing</h2>
+
+As a project grows, it becomes difficult to keep track of every method and class. Through unit testing, you can ensure that individual units of code work as expected, without starting the full Medusa server or talking to a real database.
+
+Medusa's Testing Framework (<code>@medusajs/test-utils</code>) is built for integration tests. Unit tests are written with <a title="Jest" href="https://jestjs.io/" target="_blank" rel="nofollow noopener noreferrer">Jest</a>. The DTC backend already includes the scripts and Jest config for this.
+
+Place unit tests next to the code they cover, under a <code>__tests__</code> folder, using the <code>*.unit.spec.ts</code> suffix. For example, if the function lives in <code>src/utils/is-email.ts</code>, the unit test belongs in <code>src/utils/__tests__/is-email.unit.spec.ts</code>. The backend <code>jest.config.js</code> selects those files when <code>TEST_TYPE=unit</code>:
+
+<pre class="mb-30">if (process.env.TEST_TYPE === "integration:http") {
+  module.exports.testMatch = ["**/integration-tests/http/*.spec.[jt]s"];
+} else if (process.env.TEST_TYPE === "integration:modules") {
+  module.exports.testMatch = ["**/src/modules/*/__tests__/**/*.[jt]s"];
+} else if (process.env.TEST_TYPE === "unit") {
+  module.exports.testMatch = ["**/src/**/__tests__/**/*.unit.spec.[jt]s"];
+}</pre>
+
+<div class="mb-10">A typical Jest unit test looks like this (from Medusa's own utilities):</div>
+<pre class="mb-30">import { validateEmail } from "../is-email"
+
+describe("validateEmail", () => {
+  it("successfully validates an email", () =&gt; {
+    expect(validateEmail("test@email.com")).toBe("test@email.com")
+    expect(validateEmail("test.test@email.com")).toBe("test.test@email.com")
+  })
+
+  it("throws on an invalid email", () =&gt; {
+    expect.assertions(1)
+
+    try {
+      validateEmail("not-an-email")
+    } catch (e) {
+      expect(e.message).toBe("The email is not valid")
+    }
+  })
+})</pre>
+
+<div class="mb-10">The example above uses Jest assertions to validate both the success path and the error path. Below is another unit test that checks several inputs with a table of expectations:</div>
+<pre class="mb-30">import { toCamelCase } from "../to-camel-case"
+
+describe("toCamelCase", function () {
+  it("should convert all cases to camel case", function () {
+    const expectations = [
+      { input: "testing-camelize", output: "testingCamelize" },
+      { input: "this_is-A-test", output: "thisIsATest" },
+      { input: "testingAlreadyCamelized", output: "testingAlreadyCamelized" },
+    ]
+
+    expectations.forEach((expectation) =&gt; {
+      expect(toCamelCase(expectation.input)).toEqual(expectation.output)
+    })
+  })
+})</pre>
+
+<h3 class="mt-20 mb-20">Ways to Execute Medusa Unit Tests</h3>
+
+Medusa unit tests can be executed in the following ways.
+
+<ul>
+ 	<li><b>Command Line Interface (CLI)</b>
+From <code>apps/backend</code>, run all unit tests, or pass a path to run a subset:
+<pre class="mb-20">pnpm test:unit
+pnpm test:unit src/utils/__tests__/is-email.unit.spec.ts</pre>
+The <code>test:unit</code> script is:
+<pre class="mb-20">TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit</pre>
+</li>
+ 	<li><b>IDE (VS Code, WebStorm, and similar)</b>
+You can run Jest from the editor. Configure the IDE to use the same <code>jest.config.js</code> and set <code>TEST_TYPE=unit</code> so it picks up <code>*.unit.spec.ts</code> files. You can run the whole suite or a single test, the same as from the CLI.</li>
+</ul>
+
+<h3 class="mt-20 mb-20">Frontend and JavaScript Unit Tests</h3>
+
+The Medusa Admin and design system are React/TypeScript. Packages such as <code>@medusajs/ui</code> and the admin Vite plugin use <a title="Vitest" href="https://vitest.dev/" target="_blank" rel="nofollow noopener noreferrer">Vitest</a> for component and package unit tests (<code>vitest --run</code>). The Next.js storefront in the DTC starter does not ship a first-party unit-test runner of its own; storefront behavior is covered by integration tests on the API and by end-to-end tests on the UI.
+
+<h2 id="integrationTesting" class="mt-30 mb-30">Integration Testing</h2>
+
+The next step after testing units in isolation is to see if they work together. This is where integration testing comes in. In Medusa, that means API routes, workflows, modules, the database, and third-party services (payment, fulfillment, file storage, and so on).
+
+Medusa provides <a title="Medusa Testing Tools" href="https://docs.medusajs.com/learn/debugging-and-testing/testing-tools" target="_blank" rel="nofollow noopener noreferrer"><code>@medusajs/test-utils</code></a> for this layer. Install it as a <code>devDependency</code>, configure Jest, and add the three test scripts already present in the DTC backend:
+
+<pre class="mb-30">"test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
+"test:integration:modules": "TEST_TYPE=integration:modules NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
+"test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"</pre>
+
+The main types you will want to cover:
+
+<ol class="mb-30">
+ 	<li>HTTP tests for API routes (store and admin)</li>
+ 	<li>Workflow tests for multi-step business logic</li>
+ 	<li>Module tests for a module's main service and data models</li>
+ 	<li>Third-party integration tests (payment providers, fulfillment, CMS, ERP)</li>
+</ol>
+
+<code>medusaIntegrationTestRunner</code> starts a full Medusa application, creates a temporary PostgreSQL database, runs your Jest tests, then drops that database. Increase the Jest timeout because these tests talk to the database:
+
+<pre class="mb-30">jest.setTimeout(60 * 1000)</pre>
+
+<div class="mb-10">Below is an HTTP integration test for a custom GET route at <code>/custom</code>:</div>
+<pre class="mb-30">import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+
+medusaIntegrationTestRunner({
+  testSuite: ({ api, getContainer }) =&gt; {
+    describe("Custom endpoints", () =&gt; {
+      describe("GET /custom", () =&gt; {
+        it("returns correct message", async () =&gt; {
+          const response = await api.get(`/custom`)
+
+          expect(response.status).toEqual(200)
+          expect(response.data).toHaveProperty("message")
+          expect(response.data.message).toEqual("Hello, World!")
+        })
+      })
+    })
+  },
+})
+
+jest.setTimeout(60 * 1000)</pre>
+
+<div class="mb-10">Store routes need a publishable API key. Create one in <code>beforeAll</code> and pass it on the request:</div>
+<pre class="mb-30">const response = await api.get(`/store/custom`, {
+  headers: {
+    "x-publishable-api-key": pak.token,
+  },
+})</pre>
+
+<div class="mb-10">Workflows are tested with the same runner. Execute the workflow against the test container and assert the result:</div>
+<pre class="mb-30">import { medusaIntegrationTestRunner } from "@medusajs/test-utils"
+import { helloWorldWorkflow } from "../../src/workflows/hello-world"
+
+medusaIntegrationTestRunner({
+  testSuite: ({ getContainer }) =&gt; {
+    describe("Test hello-world workflow", () =&gt; {
+      it("returns message", async () =&gt; {
+        const { result } = await helloWorldWorkflow(getContainer()).run()
+
+        expect(result).toEqual("Hello, World!")
+      })
+    })
+  },
+})
+
+jest.setTimeout(60 * 1000)</pre>
+
+<div class="mb-10">Module integration tests use <code>moduleIntegrationTestRunner</code>. They run a test Medusa application with only the specified module enabled:</div>
+<pre class="mb-30">import { moduleIntegrationTestRunner } from "@medusajs/test-utils"
+import { BLOG_MODULE } from ".."
+import BlogModuleService from "../service"
+import Post from "../models/post"
+
+moduleIntegrationTestRunner&lt;BlogModuleService&gt;({
+  moduleName: BLOG_MODULE,
+  moduleModels: [Post],
+  resolve: "./src/modules/blog",
+  testSuite: ({ service }) =&gt; {
+    describe("BlogModuleService", () =&gt; {
+      it("says hello world", () =&gt; {
+        const message = service.getMessage()
+        expect(message).toEqual("Hello, World!")
+      })
+    })
+  },
+})
+
+jest.setTimeout(60 * 1000)</pre>
+
+Run HTTP and workflow tests from <code>apps/backend</code> with:
+
+<pre class="mb-20">pnpm test:integration:http</pre>
+
+Run module tests with:
+
+<pre class="mb-20">pnpm test:integration:modules</pre>
+
+Medusa's own CI pipeline shards unit tests and HTTP/package integration tests on GitHub Actions, with PostgreSQL and Redis services. That is the right place for this layer. Browser-level flows belong in end-to-end tests.
+
+<h2 id="endToEndTesting" class="mt-30 mb-30">End-to-End Testing</h2>
+
+End-to-end or system testing verifies the behavior of the application from start to finish, covering the entire business process. This type of testing is also known as "black-box testing," as it focuses on functionality without requiring knowledge of the internal workings of the system.
+
+The goal is to simulate real-world scenarios and catch issues that appear only when a shopper uses the storefront, a merchant uses the admin, or both apps work together (for example, a merchant creates a promotion and a shopper redeems it at checkout).
+
+You can do that using the following ways.
+
+<ul>
+ 	<li>UI testing with browser automation tools</li>
+ 	<li>Selenium-based tools</li>
+ 	<li>testRigor</li>
+</ul>
+
+Medusa does not ship a Magento-style functional testing framework (MFTF) or a first-party Playwright suite. Official tooling stops at Jest plus <code>@medusajs/test-utils</code>. Browser coverage for the DTC storefront and admin is handled with testRigor in this project.
+
+We won't get into Selenium-based testing here since it might not be the most optimal way to use for end-to-end testing due to its <a title="Selenium Testing Framework Disadvantages And How To Overcome Them" href="https://testrigor.com/blog/selenium-testing-framework-disadvantages-and-how-to-overcome-them/" target="_blank" rel="noopener">limitations</a>.
+
+<h3 class="mt-20 mb-20">UI testing with supported tools</h3>
+
+Teams sometimes add <a title="Playwright" href="https://github.com/microsoft/playwright/" target="_blank" rel="nofollow noopener noreferrer">Playwright</a> (or similar) against the Next.js storefront. That requires selectors, waits, and a local browser driver, and those tests tend to break when the storefront markup changes. For the Medusa testing project, end-to-end coverage is written in plain English with testRigor instead, including flows that start in the admin at <code>localhost:9000/app</code> and finish on the storefront at <code>localhost:8000</code>.
+
+<h2 class="mt-30 mb-30">testRigor End-to-end Testing</h2>
+<a title="testRigor Documentation" href="https://testrigor.com/docs/language/" target="_blank" rel="noopener">testRigor</a> specializes in end-to-end testing. Among the key features are ease of test creation, unrivaled test stability, and low maintenance — a rare combination for E2E tests.
+
+testRigor is one of the easiest ways to cover your entire Medusa application with robust end-to-end tests. Why? Because it's a no-code <a title="Test Automation with AI" href="https://testrigor.com/blog/test-automation-with-ai/">AI</a>-driven tool and solves a lot of the tricky aspects associated with writing and maintaining complex end-to-end UI tests.
+
+Initial setup takes only a few minutes, and even less technical people can start writing tests, add assertions, and easily modify existing tests when needed. This results in being able to write tests up to 15x faster than with Selenium-based tools, and spending up to 95% less time on test maintenance — thanks to testRigor being packed with <a title="Self-healing Tests" href="https://testrigor.com/blog/self-healing-tests/">self-healing</a> features.
+
+<div>You can easily build cross-browser and even cross-platform (if needed) tests:</div>
+<ol>
+ 	<li>Support <a title="testRigor Documentation - Email Testing" href="https://testrigor.com/docs/language/#emails" target="_blank" rel="noopener">email testing</a>, as well as testing for attachments as part of the tests</li>
+ 	<li>Support <a title="testRigor Documentation - Visual" href="https://testrigor.com/docs/language/#visual" target="_blank" rel="noopener">visual</a> testing if needed (ex: you can compare an entire screen to a previous version)</li>
+ 	<li>Test two-factor authentication logins on <a title="Google Authenticator Support for Gmail 2FA" href="https://testrigor.com/google-authenticator-support/" target="_blank" rel="noopener">Gmail</a>, SMS, etc</li>
+</ol>
+
+End-to-end tests in testRigor represent how a real user would interact with the application. What this means is that you don't need to use CSS Selectors or dig into the DOM structure to define an element. Commands are in simple English terms, such as <i>click "Add to cart", or check that page contains "Thank you!"</i>.
+
+Moreover, you can do <a title="Cross-platform Testing" href="https://testrigor.com/blog/cross-platform-testing-web-and-mobile-in-one-test/">cross-platform</a> and cross-browser testing without major configuration steps. testRigor also allows 2FA, email testing, and SMS testing — included at no extra cost.
+
+As we'll see in the next section, it's straightforward to create end-to-end tests covering entire user flows while keeping abstraction from the details of implementation.
+
+<h3 style="margin: 20px 0px;">How to do End-to-end Testing with testRigor</h3>
+
+Let us take the example of the Medusa DTC storefront. We will create end-to-end test cases in testRigor using plain English test steps.
+
+<b>Step 1</b>: Log in to your testRigor app with your credentials.
+
+<b>Step 2</b>: Set up the test suite for the website testing by providing the information below:
+
+<ul class="mb-30">
+ 	<li><b>Test Suite Name</b>: Provide a relevant and self-explanatory name (for example, <i>Medusa Web</i>).</li>
+	<li><b>Type of testing</b>: Select from the following options: <i>Desktop Web Testing</i>, <i>Mobile Web Testing</i>, <i>Native and Hybrid Mobile</i>, based on your test requirements.</li>
+ 	<li><b>URL to run test on:</b> Provide the storefront URL. For the local DTC starter, that is <code>http://localhost:8000</code>. Cross-app tests also open the admin at <code>http://localhost:9000/app</code> with <code>open url</code>.</li>
+	<li><b>Testing credentials for your web/mobile app to test functionality which requires user to login: </b>You can provide the app's user login credentials here and need not write them separately in the test steps then. The login functionality will be taken care of automatically using the keyword <code>login</code>. The starter admin user is typically <code>admin@test.com</code> / <code>supersecret</code>.</li>
+	<li><b>OS and Browser:</b> Choose the OS Browser combination on which you want to run the test cases.</li>
+ 	<li><b>Number of test cases to generate using AI</b>: If you wish, you can choose to generate test cases based on the <b>App Description</b> text, which works on <a href="https://testrigor.com/generative-ai-in-software-testing/" title="Generative AI in Software Testing">generative AI</a>.</li>
+</ul>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/create-new-test-suite.png" style="width: 100% !important; max-width: 600px" class="shadow" /></div>
+
+<b>Step 3:</b> Click <b>Create Test Suite.</b>
+
+On the next screen, you can let AI generate the test case based on the <b>App Description</b> you provided during the Test Suite creation. However, for now, select <b>do not generate any test</b>, since we will write the test steps ourselves.
+
+<b>Step 4</b>: To create a new custom test case yourself, click <b>Add Custom Test Case.</b>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/12/Add-test-case.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+<b>Step 5:</b> Provide the test case <b>Description</b> and start adding the test steps.
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2024/01/blank-test-case2.png" style="width: 100% !important; max-width: 500px" class="shadow" /></div>
+
+For the Medusa application under test, we will perform the test steps below. This is the guest checkout flow from the project's <code>Guest finishes a Purchase</code> test case:
+
+<ul class="mb-30">
+ 	<li>Open a category and open a product (Medusa T-Shirt)</li>
+ 	<li>Select a variant (size S, color White) and add it to the cart</li>
+ 	<li>Go to checkout, enter shipping details, choose shipping and payment, and place the order</li>
+ 	<li>Verify the thank-you page shows the product and the guest email</li>
+</ul>
+
+<h4 style="margin: 20px 0px">Test Case: Guest finishes a Purchase</h4>
+
+<b>Step 1</b>: We will add test steps on the test case editor screen one by one.
+
+testRigor automatically navigates to the storefront URL you provided during the Test Suite creation. There is no need to use any separate function for it. The DTC storefront homepage is the starting point.
+
+Unlike traditional testing tools, you can use simple English commands that automatically handle the UI interactions. You don't need to use any CSS/XPath identifiers.
+
+<div class="mb-10">Open the Shirts category from the storefront navigation:</div>
+<pre class="mb-30">click "Shirts" below "Categories"
+check that page contains "Medusa T-Shirt"</pre>
+
+<b>Step 2</b>: Open the product and confirm the variant picker is shown:
+
+<pre class="mb-30">click "Medusa T-Shirt"
+check that page contains "Select variant"</pre>
+
+<b>Step 3:</b> Select size and color, then add the item to the cart. Use <code>click exactly "S"</code> so the size is not confused with other letters on the page:
+
+<pre class="mb-30">click exactly "S"
+click "White"
+click "Add to cart"
+check that page contains "Cart (1)"</pre>
+
+<b>Step 4:</b> Open the cart and confirm the configured variant is there before checkout:
+
+<pre class="mb-30">click "Cart (1)"
+check that page contains "Go to checkout"
+check that page contains "Medusa T-Shirt"
+check that page contains "S / White"
+click "Go to checkout"</pre>
+
+<b>Step 5:</b> Fill the shipping address. The starter's default region is Denmark, so use a Danish postal code and country. Generate a unique email so repeated runs do not collide:
+
+<pre class="mb-30">check that page contains "Shipping Address"
+enter "Jane" into "First name"
+enter "Doe" into "Last name"
+enter "123 Main Street" into "Address"
+enter "2100" into "Postal code"
+enter "Copenhagen" into "City"
+select "Denmark" from "Country"
+generate unique email, then enter into "Email" and save as "guestEmail"
+click "Continue to delivery"</pre>
+
+<b>Step 6:</b> Choose Standard Shipping and Manual Payment (the starter's default options), then place the order:
+
+<pre class="mb-30">check that page contains "Standard Shipping"
+click "Standard Shipping"
+click "Continue to payment"
+check that page contains "Manual Payment"
+click "Manual Payment"
+click "Continue to review"
+check that page contains "Place order"
+click "Place order"</pre>
+
+<b>Step 7</b>: Assert the confirmation page. With testRigor, stored values from earlier steps are easy to reuse:
+
+<pre class="mb-30">check that page contains "Thank you!"
+check that page contains "Your order was placed successfully."
+check that page contains "Medusa T-Shirt"
+check that page contains stored value from "guestEmail"</pre>
+
+<h4 style="margin: 20px 0px">Complete Test Case</h4>
+
+Here is how the complete test case looks in the testRigor app for the Medusa storefront. The test steps are simple in plain English, enabling everyone in your team to write and execute them.
+
+<pre class="mb-30">click "Shirts" below "Categories"
+check that page contains "Medusa T-Shirt"
+click "Medusa T-Shirt"
+check that page contains "Select variant"
+click exactly "S"
+click "White"
+click "Add to cart"
+check that page contains "Cart (1)"
+click "Cart (1)"
+check that page contains "Go to checkout"
+check that page contains "Medusa T-Shirt"
+check that page contains "S / White"
+click "Go to checkout"
+check that page contains "Shipping Address"
+enter "Jane" into "First name"
+enter "Doe" into "Last name"
+enter "123 Main Street" into "Address"
+enter "2100" into "Postal code"
+enter "Copenhagen" into "City"
+select "Denmark" from "Country"
+generate unique email, then enter into "Email" and save as "guestEmail"
+click "Continue to delivery"
+check that page contains "Standard Shipping"
+click "Standard Shipping"
+click "Continue to payment"
+check that page contains "Manual Payment"
+click "Manual Payment"
+click "Continue to review"
+check that page contains "Place order"
+click "Place order"
+check that page contains "Thank you!"
+check that page contains "Your order was placed successfully."
+check that page contains "Medusa T-Shirt"
+check that page contains stored value from "guestEmail"</pre>
+
+Click <b>Add and Run</b>.
+
+<h4 style="margin: 20px 0px">Execution Results</h4>
+
+Once the Medusa test is executed, you can view the execution details, such as execution status, time spent in execution, screenshots, error messages, logs, video recordings of the test execution, etc. In case of any failure, there are logs and error text that are available easily in a few clicks.
+
+You can also download the complete execution with steps and screenshots in <b>PDF</b> or <b>Word</b> format through the <b>View Execution</b> option.
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2024/01/Test-Case-final-screen2.jpeg" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+testRigor automatically takes screenshots of every step. Each test case run captures detailed screenshots along with a video recording of the whole test execution.
+
+<h4 style="margin: 20px 0px">testRigor's Capabilities</h4>
+
+Apart from the simplistic test case design and execution, there are some advanced features that help you test your application using simple English commands.
+
+<ul class="mb-30">
+ 	<li><b>Reusable Rules (Subroutines)</b>: You can easily create functions for the test steps that you use repeatedly. You can use the <b>Reusable Rules</b> to create such functions and call them in test cases by simply writing their names. See the example of <a href="https://testrigor.com/docs/language/#rules" title="testRigor English-language support documentation: Reusable Rules (Subroutines)">Reusable Rules</a>.</li>
+ 	<li><b>Global Variables and Data Sets</b>: You can import data from external files or create your own global variables and data sets in testRigor to use them in data-driven testing.</li>
+ 	<li><b>2FA, QR Code, and Captcha Resolution</b>: testRigor easily manages the 2FA, <a href="https://testrigor.com/docs/language/#scan-qr-code" title="testRigor English-language support documentation: Scan QR Code">QR Code</a>, and <a href="https://testrigor.com/docs/language/#captcha-resolution" title="testRigor English-language support documentation: Captcha resolution">Captcha resolution</a> through its simple English commands.</li>
+ 	<li><b>Email, Phone Call, and SMS Testing</b>: Use simple English commands to test the <a href="https://testrigor.com/docs/language/#emails" title="testRigor English-language support documentation: Email testing">email</a>, <a href="https://testrigor.com/docs/language/#phones" title="">phone calls</a>, and <a href="https://testrigor.com/docs/language/#sms" title="testRigor English-language support documentation: SMS messages (Phone Text)">SMS</a>. These commands are useful for validating 2FA scenarios, with OTPs and authentication codes being sent to email, phone calls, or via phone text.</li>
+ 	<li><b>File Upload/ Download Testing:</b> Execute the test steps involving file download or <a href="https://testrigor.com/docs/language/#files" title="testRigor English-language support documentation: Uploading files">file upload</a> without the requirement of any third-party software. You can also validate the contents of the files using testRigor's simple English commands.</li>
+ 	<li><b>Database Testing:</b> Execute <a href="https://testrigor.com/docs/language/#database-query" title="testRigor English-language support documentation: Database Query Support">database queries</a> and validate the results fetched.</li>
+</ul>
+
+testRigor enables you to test Medusa storefronts, the Medusa Admin, APIs, and desktop applications with minimum effort and maintenance.
+
+<h4 style="margin: 20px 0px">Additional Resources</h4>
+
+<ul class="mb-30">
+ 	<li>Access <a href="https://testrigor.com/docs/language" title="testRigor English-language support documentation">testRigor documentation</a> to know about more useful capabilities</li>
+ 	<li><a href="https://testrigor.com/features/" title="Top testRigor's Features">Top testRigor's features</a></li>
+ 	<li>How to perform <a href="https://testrigor.com/end-to-end-testing/" title="End-to-end Testing">end-to-end testing</a></li>
+ 	<li><a href="https://docs.medusajs.com/learn/debugging-and-testing/testing-tools" title="Medusa Testing Tools" target="_blank" rel="nofollow noopener noreferrer">Medusa Testing Tools</a> (Jest and <code>@medusajs/test-utils</code>)</li>
+</ul>
+
+<h2 class="mt-30 mb-30">Running Medusa Tests with testRigor</h2>
+To make it even easier to get started with Medusa testing, the project includes pre-built test cases that cover the critical storefront and admin-to-storefront workflows. You can copy each test into your own suite, or keep the steps in <code>medusa/testRigor/testcases</code> (see <code>structure.yaml</code>) and run them with the testRigor CLI.
+
+<h3 class="mt-20 mb-20">Quick Setup Guide</h3>
+Follow these simple steps to run the pre-built Medusa tests locally:
+
+<h4 class="mt-15 mb-10">Step 1: Create Your testRigor Account</h4>
+<ol>
+ 	<li>Go to <a title="testRigor" href="https://www.testrigor.com/" target="_blank" rel="noopener">testRigor.com</a></li>
+ 	<li>Click "Sign Up" and select "Public Open Source" version</li>
+ 	<li>Complete registration and verify your email</li>
+ 	<li>Log in to your account</li>
+</ol>
+
+<h4 class="mt-15 mb-10">Step 2: Access and Copy Individual Test Cases</h4>
+Each test case below is a real flow from the Medusa testing project. Copy the steps into a test case in your suite.
+
+<h5 class="mt-15 mb-10">Critical Test Cases Included</h5>
+The pre-built suite includes these essential Medusa workflows that every commerce site must have working perfectly:
+
+<div class="test-case-block">
+<h5>1. Guest Checkout (Complete Purchase Flow)</h5>
+<strong>Test:</strong> Browse Shirts, configure Medusa T-Shirt (S / White), add to cart, check out as a guest, and confirm the order.
+
+<strong>Why it's critical:</strong> This is the money-making flow. If guest checkout fails, you lose revenue. The test validates category browsing, variant selection, cart, shipping (Denmark / Standard Shipping), Manual Payment, and the thank-you page.
+
+</div>
+<div class="test-case-block">
+<h5>2. Merchant Creates a Product a Shopper Can Buy</h5>
+<strong>Test:</strong> Log in to Medusa Admin, create and publish a product, then find it on the storefront (Latest Arrivals), add it to the cart, and complete guest checkout.
+
+<strong>Why it's critical:</strong> Catalog changes happen in admin, but customers buy on the storefront. This cross-app test proves a newly published product is shoppable end to end, including shipping profile, EUR price, and order confirmation that shows the generated product title and guest email.
+
+</div>
+<div class="test-case-block">
+<h5>3. Merchant Creates a Promotion a Shopper Redeems</h5>
+<strong>Test:</strong> In admin, create an "Amount off order" promotion (EUR 5) with a generated code. On the storefront, add Medusa T-Shirt to the cart, apply that code at checkout, and finish the purchase.
+
+<strong>Why it's critical:</strong> Promotions only matter if shoppers can redeem them. This test ties admin promotion setup to checkout discounts and confirms the confirmation page still shows the product and the discount.
+
+</div>
+
+<strong>To run a case locally, follow these steps for each test case:</strong>
+<ol>
+ 	<li>Create a new test case in your testRigor suite</li>
+ 	<li>Paste the copied steps into the test case</li>
+ 	<li>Save the test case in your test suite</li>
+ 	<li>Repeat this process for any additional test cases you want to run locally</li>
+</ol>
+
+For the merchant flows, the tests start with:
+
+<pre class="mb-20">open url "http://localhost:9000/app"
+enter "admin@test.com" into "Email"
+enter "supersecret" into "Password"
+click "Continue with Email"
+check that page contains "Orders"</pre>
+
+Then they switch to the storefront with <code>open url "http://localhost:8000"</code>. Both the backend and the storefront must be running.
+
+<h4 class="mt-15 mb-10">Step 4: Set Up Your Local Environment</h4>
+Start the Medusa stack from the DTC starter root (<code>pnpm dev</code>), or start backend and storefront separately so that <code>http://localhost:8000</code> and <code>http://localhost:9000/app</code> are reachable.
+
+Create a file named <code>.env</code> in your project (for example next to <code>medusa/testRigor</code>) with these lines:
+<pre class="mb-20">MEDUSA_TEST_SUITE_ID=your_test_suite_id_here
+MEDUSA_AUTH_TOKEN=your_auth_token_here
+MEDUSA_BASE_URL=http://localhost:8000</pre>
+<strong>Replace the values:</strong>
+<ul>
+ 	<li><code>your_test_suite_id_here</code> with the Test Suite ID from your testRigor suite URL</li>
+ 	<li><code>your_auth_token_here</code> with the CI/CD auth token from the suite's CI/CD Integration page (format: <code>########-####-####-####-############</code>)</li>
+ 	<li><code>http://localhost:8000</code> with your actual storefront URL if it is not local</li>
+</ul>
+
+<h4 class="mt-15 mb-10">Step 5: Run the Tests</h4>
+Install the <a title="testRigor Command Line" href="https://testrigor.com/command-line/" target="_blank" rel="noopener">testRigor CLI</a> (Node.js 18+), then from your project folder run:
+<pre class="mb-20">npm install -g @testrigor/testrigor-cli
+
+testrigor test-suite run $MEDUSA_TEST_SUITE_ID --token $MEDUSA_AUTH_TOKEN --localhost --url $MEDUSA_BASE_URL --test-cases-path medusa/testRigor/testcases</pre>
+That's it! The system will:
+<ul>
+ 	<li>Connect to your testRigor account</li>
+ 	<li>Tunnel your local storefront when you pass <code>--localhost</code></li>
+ 	<li>Run the Medusa tests against your application</li>
+ 	<li>Show you the results in your terminal, with a link to the dashboard</li>
+</ul>
+
+<h4 class="mt-15 mb-10">Step 6: View Detailed Results</h4>
+After the tests complete, you'll see a link in your terminal. Click it to open the testRigor dashboard where you can:
+<ul>
+ 	<li>See which tests passed or failed</li>
+ 	<li>View screenshots of each test step</li>
+ 	<li>Download detailed reports</li>
+ 	<li>Re-run individual tests if needed</li>
+</ul>
+
+<h3 class="mt-20 mb-20">Setting Up GitHub CI/CD Integration</h3>
+For automated testing in your GitHub repository, you'll need to configure your testRigor credentials as GitHub secrets. This approach differs from local testing by using GitHub's secure environment variables instead of a local <code>.env</code> file.
+
+Medusa's own pipeline already runs sharded unit tests and HTTP/package integration tests. Add testRigor as the end-to-end job on top of that, pointed at a running storefront (or start the DTC stack in the workflow).
+
+<h4 class="mt-15 mb-10">Step 1: Add GitHub Secrets</h4>
+<ol>
+ 	<li>Go to your GitHub repository</li>
+ 	<li>Click on "Settings" → "Secrets and variables" → "Actions"</li>
+ 	<li><strong>Add the following:</strong>
+<ul>
+ 	<li><strong>As a <u>secret</u>:</strong>
+<ul>
+ 	<li><code>MEDUSA_AUTH_TOKEN</code>: Your testRigor auth token (keep this private)</li>
+</ul>
+</li>
+ 	<li><strong>As <u>variables</u>:</strong>
+<ul>
+ 	<li><code>MEDUSA_TEST_SUITE_ID</code>: Your testRigor Test Suite ID</li>
+ 	<li><code>MEDUSA_BASE_URL</code>: Your Medusa storefront URL</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+For further information on creating secrets and variables in GitHub Actions, you can check the official GitHub documentation on <a title="GitHub Secrets Documentation" href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets" target="_blank" rel="noopener noreferrer">secrets</a> and <a title="GitHub Variables Documentation" href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-variables" target="_blank" rel="noopener noreferrer">variables</a>.
+<div class="mb-20">
+<h5>Required GitHub Secrets and Variables:</h5>
+<ul>
+ 	<li><strong>MEDUSA_TEST_SUITE_ID:</strong> Your testRigor Test Suite ID (e.g., 12345)</li>
+ 	<li><strong>MEDUSA_AUTH_TOKEN:</strong> Your testRigor auth token (format: ########-####-####-####-############)</li>
+ 	<li><strong>MEDUSA_BASE_URL:</strong> Your Medusa storefront URL (e.g., https://yourstore.com or http://localhost:8000)</li>
+</ul>
+</div>
+<h4 class="mt-15 mb-10">Step 2: Use in GitHub Actions</h4>
+In your GitHub Actions workflow file, reference these secrets like this:
+<pre class="mb-20">- name: Run testRigor Tests
+  run: |
+    npm install -g @testrigor/testrigor-cli
+    testrigor test-suite run ${{ vars.MEDUSA_TEST_SUITE_ID }} --token ${{ secrets.MEDUSA_AUTH_TOKEN }} --url ${{ vars.MEDUSA_BASE_URL }} --test-cases-path medusa/testRigor/testcases
+  env:
+    MEDUSA_AUTH_TOKEN: ${{ secrets.MEDUSA_AUTH_TOKEN }}
+    MEDUSA_TEST_SUITE_ID: ${{ vars.MEDUSA_TEST_SUITE_ID }}
+    MEDUSA_BASE_URL: ${{ vars.MEDUSA_BASE_URL }}</pre>
+If the workflow starts the DTC stack on the runner, add <code>--localhost</code> so testRigor can reach <code>http://localhost:8000</code> and <code>http://localhost:9000</code>. Cross-app cases that <code>open url "http://localhost:9000/app"</code> need the backend up as well.
+
+You can further integrate this workflow with your own instance of <a href="https://github.com/medusajs/medusa" target="_blank" rel="noopener noreferrer">Medusa</a> to make your commerce platform completely set up for CI/CD.
+
+<strong>Key Difference:</strong> While local testing uses a <code>.env</code> file, CI/CD uses GitHub's secure secret management system, ensuring your credentials are encrypted and only accessible to authorized workflows.
+
+<h3 class="mt-20 mb-20">Troubleshooting Tips</h3>
+If you find any issues:
+<ul>
+ 	<li><strong>Make sure the Medusa storefront and backend are running</strong> and accessible at the URLs you specified (<code>http://localhost:8000</code> and <code>http://localhost:9000/app</code> for local)</li>
+ 	<li><strong>Check your .env file</strong> — ensure all three values are correct and there are no extra spaces</li>
+ 	<li><strong>Verify the admin user</strong> — merchant tests log in as <code>admin@test.com</code> / <code>supersecret</code> unless you changed the starter user</li>
+ 	<li><strong>Match the region</strong> — guest checkout in this project uses Denmark, postal code 2100, Copenhagen, Standard Shipping, and Manual Payment</li>
+ 	<li><strong>Verify your testRigor account</strong> — make sure you can log in and see the test suite</li>
+ 	<li><strong>Check your internet connection</strong> — testRigor needs to reach the cloud (and to download the CLI on first run)</li>
+</ul>
+If a local tunnel run fails to see the admin app, confirm both <code>pnpm dev</code> processes are up and that <code>--localhost</code> is passed to the CLI.
+
+<h2 class="mt-30 mb-30">Conclusion</h2>
+
+With ecommerce application building, it becomes imperative to have reliable, well-tested building blocks. Medusa gives you modules, workflows, API routes, an admin, and a storefront you can customize. Unit tests with Jest protect helpers and algorithms. Integration tests with <code>@medusajs/test-utils</code> protect HTTP routes, workflows, and modules against a real database. End-to-end tests with testRigor protect the paths that actually make money: guest checkout, merchant-created products, and promotions redeemed on the storefront. Together, those layers give you a strong testing strategy for the Medusa application.
+
+[text-blocks id="1575" slug="join-the-next-wave"]
+
+</div>

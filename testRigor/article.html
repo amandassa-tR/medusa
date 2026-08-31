@@ -1,0 +1,352 @@
+<a title="PrestaShop" href="https://www.prestashop.com/en" target="_blank" rel="nofollow noopener noreferrer">PrestaShop</a> is a free, open-source e-commerce platform that enables businesses to create and manage their online stores. Launched in 2007, it has become one of the most popular e-commerce solutions globally due to its user-friendly interface, extensive customization options, and a wide range of features.
+
+<div class="mb-30"><img class="alignnone" src="https://testrigor.com/wp-content/uploads/2023/03/PrestaShop-logo.png" alt="PrestaShop Testing" style="width: 100%; max-width: 550px"></div>
+
+It is built on the <a title="PHP Testing" href="https://testrigor.com/php-testing/">PHP</a> programming language and uses MySQL for database management. It offers a variety of built-in features, such as product and inventory management, payment gateway integrations, multi-language and multi-currency support, marketing tools, and order management. Additionally, its modular architecture allows users to extend its functionality with plugins and themes available from the PrestaShop marketplace.
+
+In this framework, you have the capability to customize the following:
+
+<ul class="mb-30">
+  <li><a title="Themes" href="https://devdocs.prestashop-project.org/8/themes/" target="_blank" rel="nofollow noopener noreferrer">Themes</a></li>
+  <li><a title="Modules" href="https://devdocs.prestashop-project.org/8/modules/" target="_blank" rel="nofollow noopener noreferrer">Modules</a></li>
+  <li>Hooks</li>
+  <li>Overriding</li>
+</ul>
+ 
+A default set of themes and modules are made available to you as a part of the original project. However, you can apply further customizations to make sure that your website grows and behaves the way you want it to. Prestashop also allows you to host your website easily.
+
+According to the <a title="Test Automation Pyramid" href="https://testrigor.com/blog/test-automation-pyramid-done-right/">testing pyramid</a>, you can test your PrestaShop application through
+
+<ul class="mb-30 font-bold">
+  <li><a href="#unitTesting">Unit testing</a></li>
+  <li><a href="#integrationTesting">Integration testing</a></li>
+  <li><a href="#endToEndTesting">End-to-end testing</a></li>
+</ul>
+
+<h2 id="unitTesting" class="mt-30 mb-30">Unit Testing</h2>
+
+As a project grows, it becomes difficult to keep track of every single method and class written. Through unit testing, you can ensure that your methods and classes, that is, various units of code, are working as expected.
+
+PrestaShop supports the <a title="PHPUnit framework" href="https://phpunit.de/" target="_blank" rel="nofollow noopener noreferrer">PHPUnit</a> framework. It is essential to have a clean folder structure. In Prestashop, the unit test case should be located in the tests/Unit folder and have the same path as the tested class. For example, if the class to be tested is in src/Core/Foo/Baz, then the unit test should be in the tests/Unit/Core/Foo/Baz folder.
+
+<div class="mb-10">Using the TestCase class to base your unit tests on is advisable. It will look something like this.</div>
+
+  <pre class="mb-30">&#60;?php
+  namespace Tests\Unit\Foo;
+  
+  use PHPUnit\Framework\TestCase;
+  
+  class BarTest extends TestCase
+  {
+    /* ... */
+  }</pre>
+
+<div class="mb-10">Unit tests can look something like this.</div>
+  <pre class="mb-30">&#60;?php
+use PHPUnit\Framework\TestCase;
+
+class EqualsTest extends TestCase
+{
+  public function testFailure()
+  {
+    $this-&#62;assertEquals(1, 0);
+  }
+
+  public function testFailure2()
+  {
+    $this-&#62;assertEquals('bar', 'baz');
+  }
+}
+?&#62;</pre>
+
+<div class="mb-10">The above example is a basic depiction of using assert methods to validate results. Below is another example of a unit test.</div>
+  <pre class="mb-30">&#60;?php
+use PHPUnit\Framework\TestCase;
+class DependTest extends TestCase
+{
+  public function testEmpty()
+  {
+    $value = [];
+    $this-&#62;assertEmpty($value);
+    return $value;
+  }
+
+  /**
+   * @depends testEmpty
+  */
+
+  public function testPush(array $value)
+  {
+    array_push($value, 'first');
+    $this-&#62;assertEquals('first', $value[count($value) - 1]);
+    $this-&#62;assertNotEmpty($value);
+    return $value;
+  }
+}
+?&#62;</pre>
+
+<h2 id="integrationTesting" class="mt-30 mb-30">Integration Testing</h2>
+
+The next step after testing different units in your code in isolation is to see if they also work together well. This is where integration testing comes into the picture. You can plan your test cases such that the integrations at crucial junctions are tested.
+
+For example, if your e-commerce website is to call a third-party payment gateway, then you can have positive and negative integration tests revolving around this scenario. Other areas that you can target for integration testing could be places where there are integrations with databases, file management systems, and any third-party applications.
+
+<div class="mb-10">Below are a couple of integration test case examples.</div>
+  <pre class="mb-30">&#60;?php
+namespace Tests\Integration;
+use Tests\TestCase;
+
+class MathTest extends TestCase
+{
+  public function setUp()
+  {
+    parent::setUp();
+    $this-&#62;math = $this-&#62;app-&#62;make('App\Math');
+  }
+
+  public function test_getArea_WhenCalledWithLength2_Return4()
+  {
+    $response = $this-&#62;math-&#62;getArea(2);
+    $this-&#62;assertTrue(is_int($response));
+    $this-&#62;assertEquals(4, $response);
+  }
+}</pre>
+
+  <pre class="mb-30">&#60;?php
+ function testSavingUser()
+ {
+  $user = new User();
+  $user-&#62;setName(Erica);
+  $user-&#62;setSurname(Jones);
+  $user-&#62;save();
+  $this-&#62;assertEquals(Erica Jones, $user-&#62;getFullName());
+  $this-&#62;tester-&#62;seeInDatabase('users', ['name' => Erica, 'surname' => Jones]);
+ }</pre>
+
+<h2 id="endToEndTesting" class="mt-30 mb-30">End-to-End Testing</h2>
+
+End-to-end or system testing verifies the behavior and performance of an application from start to finish, covering the entire system flow or business process. This type of testing is also known as "black-box testing," as it focuses on the functionality of the application without requiring knowledge of the internal workings of the system.
+
+The goal of end-to-end testing is to simulate real-world scenarios and identify any issues or defects that may arise when actual users use the application. It typically involves testing the application as a whole, including its interfaces with external systems, databases, and other dependencies.
+
+You can do that using the following ways.
+
+<ul>
+  <li>UI testing with supported tools</li>
+  <li>Selenium-based tools</li>
+  <li>testRigor</li>
+</ul>
+
+<h3 class="mt-20 mb-20">UI testing with supported tools: Playwright, Mocha, Chai, Faker</h3>
+
+Prestashop offers support to automate UI scenarios with the help of the following tools. It uses
+
+<ul>
+  <li><a title="Playwright" href="https://github.com/microsoft/playwright/" target="_blank" rel="nofollow noopener noreferrer">Playwright</a> as the automation tool</li>
+  <li><a title="Mocha" href="https://mochajs.org/" target="_blank" rel="nofollow noopener noreferrer">Mocha</a> as the testing framework</li>
+  <li><a title="Chai" href="https://www.chaijs.com/" target="_blank" rel="nofollow noopener noreferrer">Chai</a> as the assertion library</li>
+  <li><a title="Faker" href="https://github.com/faker-js/faker" target="_blank" rel="nofollow noopener noreferrer">Faker</a> as the mock data generator</li>
+</ul>
+
+<div class="mb-10">Below is an example of using Playwright to manage browser manipulations, Mocha to define the test framework, and Chai for performing the assertions. The test case below checks if the to-do list loaded is empty and whether a new item gets added to the list.</div>
+  <pre class="mb-30">const playwright = require('playwright')
+const chai = require('chai')
+const expect = chai.expect
+const BASE_URL = 'http://todomvc.com/examples/react/#/'
+
+// playwright variables
+let page, browser, context
+
+describe('TO DO APP TESTS - PLAYWRIGHT', () => {
+  beforeEach(async () => {
+    browser = await playwright['chromium'].launch({ headless: false })
+    context = await browser.newContext()
+    page = await context.newPage(BASE_URL)
+  })
+  
+  afterEach(async function() {
+    await page.screenshot({ path: `${this.currentTest.title.replace(/\s+/g, '_')}.png` })
+    await browser.close()
+  })
+
+  it('List is loaded empty', async() => {
+    const sel = 'ul.todo-list li'
+    const list = await page.$$(sel)
+    expect(list.length).to.equal(0)
+  })
+
+  it('Adds a new todo in empty list', async() => {
+    await page.waitForSelector('input')
+    const element = await page.$('input')
+    await element.type('Practice microsoft playwright')
+    await element.press('Enter')
+
+    // check list of ToDo
+    const sel = 'ul.todo-list li'
+    await page.waitForSelector(sel)
+    const list = await page.$$(sel)
+    expect(list.length).to.equal(1)
+    expect(await page.$eval(sel, node => node.innerText)).to.be.equal('Practice microsoft playwright')
+  })
+})</pre>
+
+<h3 class="mt-20 mb-20">testRigor for end-to-end testing</h3>
+
+testRigor is one of the easiest ways to cover your entire application with robust end-to-end tests. Why? Because it's a no-code <a title="Test Automation with AI" href="https://testrigor.com/blog/test-automation-with-ai/">AI</a>-driven tool and solves a lot of the tricky aspects associated with writing and maintaining complex end-to-end UI tests.
+
+Initial setup takes only a few minutes, and even less technical people can start writing tests, add assertions, and easily modify existing tests when needed. This results in being able to write tests up to 15x faster than with Selenium-based tools, and spending up to 95% less time on test maintenance - thanks to testRigor being packed with <a title="Self-healing Tests" href="https://testrigor.com/blog/self-healing-tests/">self-healing</a> features.
+
+Moreover, you can do <a title="Cross-platform Testing" href="https://testrigor.com/blog/cross-platform-testing-web-and-mobile-in-one-test/">cross-platform</a> and cross-browser testing without major configuration steps. testRigor also allows 2FA, email testing, and SMS testing - included at no extra cost.
+    
+Let us consider the example from the UI testing using the supported tools section above. There is an application in React for creating a to-do list. The code has 2 test cases within the describe() block. When considering the test case in testRigor, things become much easier. Firstly, you need to create a test suite. During this suite creation, you can give the URL so that every time a new test case from this suite runs, a fresh instance of the application is opened in the browser. You can also specify the browser of your choice from the suggested options. This covers your beforeEach() block from the above code. As you can tell, it is much simpler than creation explicit conditions.
+
+<div class="mb-10">Your actual test case will look like this:</div>
+  <pre class="mb-30">check that page does not contain checkboxes below "what needs to be done?"
+enter "Buy groceries for Friday dinner" into "What needs to be done?"
+enter enter into "testrigor.com test"
+check that page contains "Buy groceries for Friday dinner" below "What needs to be done?"</pre>
+    
+In the afterEach() block, testRigor automatically takes screenshots of every step. Each test case run captures detailed screenshots along with a video recording of the whole test execution.
+
+
+<h3 style="margin: 20px 0px">How to do End-to-end Testing with testRigor</h3>
+
+Let us take the example of a PrestaShop e-commerce website. We will create end-to-end test cases in testRigor using plain English test steps.
+
+<b>Step 1</b>: Log in to your testRigor app with your credentials.
+
+<b>Step 2</b>: Set up the test suite for the website testing by providing the information below:
+
+<ul class="mb-30">
+ 	<li><b>Test Suite Name</b>: Provide a relevant and self-explanatory name.</li>
+	<li><b>Type of testing</b>: Select from the following options: <i>Desktop Web Testing</i>, <i>Mobile Web Testing</i>, <i>Native and Hybrid Mobile</i>, based on your test requirements.</li>
+ 	<li><b>URL to run test on:</b> Provide the application URL that you want to test.</li>
+	<li><b>Testing credentials for your web/mobile app to test functionality which requires user to login: </b>You can provide the app's user login credentials here and need not write them separately in the test steps then. The login functionality will be taken care of automatically using the keyword <code>login</code>.</li>
+	<li><b>OS and Browser:</b> Choose the OS Browser combination on which you want to run the test cases.</li>
+ 	<li><b>Number of test cases to generate using AI</b>: If you wish, you can choose to generate test cases based on the <b>App Description</b> text, which works on <a href="https://testrigor.com/generative-ai-in-software-testing/" title="Generative AI in Software Testing">generative AI</a>.</li>
+</ul>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/create-new-test-suite.png" style="width: 100% !important; max-width: 600px" class="shadow" /></div>
+
+<b>Step 3:</b> Click <b>Create Test Suite.</b>
+
+On the next screen, you can let AI generate the test case based on the <b>App Description</b> you provided during the Test Suite creation. However, for now, select <b>do not generate any test</b>, since we will write the test steps ourselves.
+
+<b>Step 4</b>: To create a new custom test case yourself, click <b>Add Custom Test Case.</b>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/12/Add-test-case.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+<b>Step 5:</b> Provide the test case <b>Description</b> and start adding the test steps.
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2024/01/blank-test-case2.png" style="width: 100% !important; max-width: 500px" class="shadow" /></div>
+
+For the PrestaShop application under test, we will perform the test steps below:
+
+<ul class="mb-30">
+ 	<li>Search for a product (e.g., t-shirt or clothing item)</li>
+ 	<li>Add it to the cart</li>
+ 	<li>Verify that the product is present in the cart</li>
+</ul>
+
+<h4 style="margin: 20px 0px">Test Case: Search and Add to Cart</h4>
+
+<b>Step 1</b>: We will add test steps on the test case editor screen one by one.
+
+testRigor automatically navigates to the PrestaShop website URL you provided during the Test Suite creation. There is no need to use any separate function for it. Here is the PrestaShop homepage, which we intend to test.
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/prestashop-storefront.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+First, we want to search for a product. Unlike traditional testing tools, you can use simple English commands that automatically handle the UI interactions. You don't need to use any CSS/XPath identifiers.
+
+<div class="mb-10">To search for a product in PrestaShop, we can use testRigor's built-in search command that will automatically find and use the search functionality:</div>
+<pre class="mb-30">search for "t-shirt"</pre>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/search.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+Search lists all products with the "t-shirt" keyword on the webpage.
+
+<b>Step 2</b>: The t-shirt we are searching for needs the screen to be scrolled; for that testRigor provides a command. Scroll down until the product is present on the screen:
+
+<pre class="mb-30">scroll down until page contains "Hummingbird printed t-shirt"</pre>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/scroll.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+When the product is found on the screen, testRigor stops scrolling.
+
+<b>Step 3:</b> Click on the product name to view the details:
+
+<pre class="mb-30">click "Hummingbird printed t-shirt"</pre>
+
+After the click, the t-shirt product details are displayed on the screen as below, with the default <b>Quantity</b> as <b>1</b>.
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/product-details.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+<b>Step 4:</b> Let's say, we want to change the <b>Quantity </b>to<b> 2</b>, so here we use the testRigor command to select from a dropdown or modify the quantity field.
+
+<pre class="mb-30">enter "2" into "Quantity"</pre>
+
+<div class="mb-10">After choosing the correct Quantity, add the product to the cart.</div>
+<pre class="mb-30">click "Add to cart"</pre>
+
+The t-shirt is successfully added to the cart, and a confirmation message is displayed on the webpage. PrestaShop shows a message <b>"Product successfully added to your shopping cart"</b>.
+
+<b>Step 5:</b> To assert that the message is successfully displayed, use a simple assertion command as below:
+
+<pre class="mb-30">check that page contains "Product successfully added to your shopping cart"</pre>
+
+<b>Step 6:</b> After this check, we will view the contents of the cart by clicking the <b>"Proceed to checkout"</b> button as below:
+
+<pre class="mb-30">click "Proceed to checkout"</pre>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/added.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+<b>Step 7</b>: Now we will check that the product is present in the cart, under the shopping cart section using the below assertion. With testRigor, it is really easy to specify the location of an element on the screen.
+
+<pre class="mb-30">check that page contains "Hummingbird printed t-shirt" roughly below "Shopping Cart"</pre>
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/checkout2.png" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+<h4 style="margin: 20px 0px">Complete Test Case</h4>
+
+Here is how the complete test case will look in the testRigor app for testing the PrestaShop e-commerce website. The test steps are simple in plain English, enabling everyone in your team to write and execute them.
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2025/11/testcase.png" style="width: 100% !important; max-width: 600px" class="shadow" /></div>
+
+Click <b>Add and Run</b>.
+
+<h4 style="margin: 20px 0px">Execution Results</h4>
+
+Once the PrestaShop test is executed, you can view the execution details, such as execution status, time spent in execution, screenshots, error messages, logs, video recordings of the test execution, etc. In case of any failure, there are logs and error text that are available easily in a few clicks.
+
+You can also download the complete execution with steps and screenshots in <b>PDF</b> or <b>Word</b> format through the <b>View Execution</b> option.
+
+<div class="mb-30"><img src="https://testrigor.com/wp-content/uploads/2024/01/Test-Case-final-screen2.jpeg" style="width: 100% !important; max-width: 700px" class="shadow" /></div>
+
+<h4 style="margin: 20px 0px">testRigor's Capabilities</h4>
+
+Apart from the simplistic test case design and execution, there are some advanced features that help you test your application using simple English commands.
+
+<ul class="mb-30">
+ 	<li><b>Reusable Rules (Subroutines)</b>: You can easily create functions for the test steps that you use repeatedly. You can use the <b>Reusable Rules</b> to create such functions and call them in test cases by simply writing their names. See the example of <a href="https://testrigor.com/docs/language/#rules" title="testRigor English-language support documentation: Reusable Rules (Subroutines)">Reusable Rules</a>.</li>
+ 	<li><b>Global Variables and Data Sets</b>: You can import data from external files or create your own global variables and data sets in testRigor to use them in data-driven testing.</li>
+ 	<li><b>2FA, QR Code, and Captcha Resolution</b>: testRigor easily manages the 2FA, <a href="https://testrigor.com/docs/language/#scan-qr-code" title="testRigor English-language support documentation: Scan QR Code">QR Code</a>, and <a href="https://testrigor.com/docs/language/#captcha-resolution" title="testRigor English-language support documentation: Captcha resolution">Captcha resolution</a> through its simple English commands.</li>
+ 	<li><b>Email, Phone Call, and SMS Testing</b>: Use simple English commands to test the <a href="https://testrigor.com/docs/language/#emails" title="testRigor English-language support documentation: Email testing">email</a>, <a href="https://testrigor.com/docs/language/#phones" title="">phone calls</a>, and <a href="https://testrigor.com/docs/language/#sms" title="testRigor English-language support documentation: SMS messages (Phone Text)">SMS</a>. These commands are useful for validating 2FA scenarios, with OTPs and authentication codes being sent to email, phone calls, or via phone text.</li>
+ 	<li><b>File Upload/ Download Testing:</b> Execute the test steps involving file download or <a href="https://testrigor.com/docs/language/#files" title="testRigor English-language support documentation: Uploading files">file upload</a> without the requirement of any third-party software. You can also validate the contents of the files using testRigor's simple English commands.</li>
+ 	<li><b>Database Testing:</b> Execute <a href="https://testrigor.com/docs/language/#database-query" title="testRigor English-language support documentation: Database Query Support">database queries</a> and validate the results fetched.</li>
+</ul>
+
+testRigor enables you to test PrestaShop e-commerce websites, mobile apps (hybrid, native), APIs, and desktop applications with minimum effort and maintenance.
+
+<h4 style="margin: 20px 0px">Additional Resources</h4>
+
+<ul class="mb-30">
+ 	<li>Access <a href="https://testrigor.com/docs/language" title="testRigor English-language support documentation">testRigor documentation</a> to know about more useful capabilities</li>
+ 	<li><a href="https://testrigor.com/features/" title="Top testRigor's Features">Top testRigor's features</a></li>
+ 	<li>How to perform <a href="https://testrigor.com/end-to-end-testing/" title="End-to-end Testing">end-to-end testing</a></li>
+</ul>
+
+<h2 class="mt-30 mb-30">Conclusion</h2>
+
+With e-commerce website building, it becomes imperative to have reliable, well-tested building blocks. If the framework offers various modules and themes, they should be user-friendly. For instance, Prestashop provides many options for building your website, including the ability to use provided blocks or customize them to suit your needs. Once your website is operational, the good testing strategies described in this article can help you build a strong testing strategy.
+
+[text-blocks id="1575" slug="join-the-next-wave"]

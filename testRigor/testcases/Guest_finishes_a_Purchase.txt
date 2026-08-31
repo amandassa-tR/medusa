@@ -1,0 +1,6 @@
+click "Shirts" below "Categories"
+click exactly "S"
+click "White"
+click "Add to cart"
+click "Cart"
+take screenshot

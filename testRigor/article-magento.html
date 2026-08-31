@@ -1,0 +1,295 @@
+[raw]
+<div class="single-top-line-ad">Turn your manual testers into <span class="text-red">automation experts</span> <a class="btn btn-outline-danger" href="/request-demo/">Request a Demo</a><a class="btn btn-danger" href="/sign-up/">Start testRigor Free</a></div>
+<div class="article-white-block pb-20">
+<h1 class="mb-30">Magento Testing</h1>
+[/raw]
+<div class="mb-30"><img class="alignnone" style="width: 100%; max-width: 550px;" src="https://testrigor.com/wp-content/uploads/2022/09/magento_testing_page_header_2-1024x299.png" alt="Magento Testing" /></div>
+<a title="Magento" href="https://business.adobe.com/products/magento/magento-commerce.html" target="_blank" rel="nofollow noopener noreferrer">Magento</a> (both a free, open-source version and a commerce version called Adobe Commerce) is a popular choice for building e-commerce websites. It is a powerful platform with its own testing frameworks to help you test your website. However, there are certain limitations when it comes to testing that you ought to know.
+
+[raw]
+<div>Let's discuss different ways to test your Magento application:</div>
+<ul class="mb-30">
+ 	<li>Unit Testing</li>
+ 	<li>Integration Testing</li>
+ 	<li>Magento Functional Testing Framework (MFTF)</li>
+ 	<li>End-to-End Testing</li>
+</ul>
+<h2 class="mt-30 mb-30">Magento Unit Testing</h2>
+As the <a title="Test Automation Pyramid Done Right" href="/blog/test-automation-pyramid-done-right/" target="_blank" rel="noopener">testing pyramid</a> suggests, unit tests should be at the very beginning, encompassing the base of all tests. Magento supports unit testing of all algorithms and methods. It utilizes the PHPUnit framework. It supports PHP as well as JavaScript unit testing. Since Magento has some predefined features, it also comes with some predefined unit test cases. These unit tests are written by following the Test Data Driven (TDD) approach.
+<h2 class="mt-30 mb-30">Ways to Execute Magento PHP Unit Tests</h2>
+Magento unit tests can be executed in the following ways.
+<ul>
+ 	<li><b>Command Line Interface (CLI)</b>
+It is possible to run all or a select few tests using the CLI. Their specific directory paths need to be mentioned for the respective cases to be executed. For further reading, refer to this <a title="Adobe Developer Documentation - Command Line" href="https://developer.adobe.com/commerce/testing/guide/unit/command-line/" target="_blank" rel="nofollow noopener noreferrer">link</a>.</li>
+ 	<li><b>PhpStorm IDE</b>
+It is also possible to run unit tests through IDEs like PhpStorm. Just like the CLI execution, the IDE execution also supports running either all or a select group of unit tests. However, the IDE needs to be configured to run the correct set of cases. Further details on the configuration and commands can be found <a title="Adobe Developer Documentation - Unit tests in PhpStorm" href="https://developer.adobe.com/commerce/testing/guide/unit/phpstorm/" target="_blank" rel="nofollow noopener noreferrer">here</a>.</li>
+</ul>
+<h2 class="mt-30 mb-30">Ways to Execute Magento JavaScript Unit Tests</h2>
+Magento provides sophisticated frontend capabilities for frontend unit testing. The Commerce version of Magento supports testing JavaScript code using Jasmine and a custom version of Grunt CLI task runner. Further details on the configuration and commands can be found <a title="Adobe Developer Documentation - JavaScript unit testing with Jasmine" href="https://developer.adobe.com/commerce/testing/guide/js/" target="_blank" rel="nofollow noopener noreferrer">here</a>.
+<h2 class="mt-30 mb-30">Magento Integration Testing</h2>
+The next layer after unit tests is typically integration. As you know, the goal of these tests is to make sure various components interact with each other as expected. Some examples include integration with a third-party system or an API. Keep in mind that integration tests in Magento require a runtime environment.
+<div>The main types that you might be interested in building the tests for:</div>
+<ol class="mb-30">
+ 	<li>HTTP tests to test APIs</li>
+ 	<li>Third party integration tests</li>
+ 	<li>Browser tests (although you might want them to be a part of end-to-end tests)</li>
+</ol>
+All of the details on setting up the integration testing with Magento can be found <a title="Adobe Developer Documentation - Integration testing" href="https://developer.adobe.com/commerce/testing/guide/integration/" target="_blank" rel="nofollow noopener noreferrer">here</a>.
+<div class="mb-5">Here's an example of a such test:</div>
+<pre class="mb-30">&lt;?php
+
+namespace IntegerNet\Categorydisplay\Test\Integration\Controller;
+
+class NewProductTest extends \Magento\TestFramework\TestCase\AbstractController
+{
+    public static function loadFixture()
+    {
+        include __DIR__ . '/../_files/categories.php';
+        include __DIR__ . '/../_files/products.php';
+    }
+
+    /**
+     * @magentoDbIsolation enabled
+     * @magentoAppIsolation enabled
+     * @magentoDataFixture loadFixture
+     */
+    public function testDisplaysCorrectProduct()
+    {
+        $this-&gt;dispatch('catalog/category/view/id/xyz');
+
+        $this-&gt;assertContains('OurProduct 1', $this-&gt;getResponse()-&gt;getBody());
+        $this-&gt;assertNotContains('Our Product 2', $this-&gt;getResponse()-&gt;getBody());
+    }
+}</pre>
+<h2 class="mt-30 mb-30">Magento End-to-end Testing</h2>
+End-to-end tests sit on top of the testing pyramid. They are typically the slowest (compared to other types of tests) but also the most representative. Since E2E tests represent the entire user flow, having a tight coverage is the only way to ensure a great user experience.
+<div>There are multiple ways to build these tests:</div>
+<ol>
+ 	<li>Magento Functional Testing Framework (<a title="MFTF" href="https://developer.adobe.com/commerce/testing/functional-testing-framework/" target="_blank" rel="nofollow noopener noreferrer">MFTF</a>)</li>
+ 	<li><a title="Selenium" href="https://www.selenium.dev/" target="_blank" rel="nofollow noopener noreferrer">Selenium</a>, or any other framework based on it</li>
+ 	<li>testRigor</li>
+</ol>
+We won't get into Selenium-based testing here since it might not be the most optimal way to use for end-to-end testing due to its <a title="Selenium Testing Framework Disadvantages And How To Overcome Them" href="https://testrigor.com/blog/selenium-testing-framework-disadvantages-and-how-to-overcome-them/" target="_blank" rel="noopener">limitations</a>.
+<h2 class="mt-30 mb-30">Magento Functional Testing Framework (MFTF)</h2>
+<a title="MFTF" href="https://developer.adobe.com/commerce/testing/functional-testing-framework/" target="_blank" rel="nofollow noopener noreferrer">MFTF</a> aims to simplify the testing of complex use cases that are likely to be encountered in e-commerce websites. It tends to target the pages that the end users and admins of the system will interact with. As your website grows, it becomes essential to have automation testing strategies in place to validate the integrity of the ever-growing e-commerce website constantly. This framework is quite stable as it is based on technologies like Selenium, Allure, and Codeception. Since it is meant for Magento websites, it is highly customizable and scalable. It is open source which makes it a popular choice for Magento applications testing. As Magento provides some common functionalities that are used in e-commerce websites, it also has a directory where functional test cases for these features are stored.
+
+It is necessary to set up the environment for functional testing by downloading the required versions of PHP, Java, Composer, and web driver. A detailed overview of this setup can be found <a title="Adobe Developer Documentation - Getting started" href="https://devdocs.magento.com/mftf/v2/docs/getting-started.html" target="_blank" rel="nofollow noopener noreferrer">here</a>.
+
+All test cases are written in XML. The XML files are built to generate PHP class files which are then executed. It is possible to add assertions, data sets, and club repetitive actions into action groups using MFTF. Details on how to convert manual test cases into MFTF cases can be found <a title="Adobe Developer Documentation - Preparing a test" href="https://developer.adobe.com/commerce/testing/functional-testing-framework/test-writing/test-prep/" target="_blank" rel="nofollow noopener noreferrer">here</a>.
+
+Reports of these functional test cases are generated using Allure.
+<div class="mb-20">
+<h4>Enhanced MFTF with testRigor Integration</h4>
+For teams looking to combine the power of MFTF with testRigor's advanced testing capabilities, we offer an enhanced version that includes built-in testRigor integration. This version includes:
+<ul>
+ 	<li>Seamless integration between MFTF and testRigor testing frameworks</li>
+ 	<li>Pre-configured CI/CD workflows for GitHub Actions</li>
+ 	<li>Ready-to-use testRigor scripts for automated testing</li>
+ 	<li>Simplified setup process for testRigor integration</li>
+</ul>
+To use it, simply set the required GitHub secret and variable as described in the <a href="https://testrigor.com/magento-testing/#step_1_add_github_secrets" target="_blank" rel="noopener noreferrer">following steps</a>, and then run the tests directly from the included GitHub Actions workflow.
+You can further integrate this workflow with your own instance of (<a href="https://github.com/magento/magento2" target="_blank" rel="noopener noreferrer">Magento</a>) to make your e-commerce platform completely set up for CI/CD.
+
+This enhanced version is available as a fork of the official MFTF repository. You can <a title="Enhanced MFTF with testRigor Integration" href="https://github.com/amandassa-tR/magento2-functional-testing-framework" target="_blank" rel="noopener noreferrer">fork it</a> to get started with the integrated testing approach immediately.
+
+</div>
+<h2 class="mt-30 mb-30">testRigor End-to-end Testing</h2>
+<a title="testRigor Documentation" href="https://testrigor.com/docs/language/" target="_blank" rel="noopener">testRigor</a> specializes in end-to-end testing. Among the key features are ease of test creation, unrivaled test stability, and low maintenance - a rare combination for E2E tests.
+<div>You can easily build cross-browser and even cross-platform (if needed) tests:</div>
+<ol>
+ 	<li>Support <a title="testRigor Documentation - Email Testing" href="https://testrigor.com/docs/language/#emails" target="_blank" rel="noopener">email testing</a>, as well as testing for attachments as part of the tests</li>
+ 	<li>Support <a title="testRigor Documentation - Visual" href="https://testrigor.com/docs/language/#visual" target="_blank" rel="noopener">visual</a> testing if needed (ex: you can compare an entire screen to a previous version)</li>
+ 	<li>Test two-factor authentication logins on <a title="Google Authenticator Support for Gmail 2FA" href="https://testrigor.com/google-authenticator-support/" target="_blank" rel="noopener">Gmail</a>, SMS, etc</li>
+</ol>
+End-to-end tests in testRigor represent how a real user would interact with the application. What this means is that you don't need to use CSS Selectors or dig into the DOM structure to define an element. Commands are in simple English terms, such as <i>click "Add to Cart", or check that checkbox "Remember me" is checked</i>.
+
+As we'll see on the next section, it's very straightforward to create end-to-end tests covering the entire user flows while keeping abstraction from the details of implementation.
+<h3 style="margin: 20px 0px;">How to create End-to-end tests with testRigor</h3>
+[/raw][text-blocks id="how-to-do-end-to-end-testing-with-testrigor"]
+<h2 class="mt-30 mb-30">Running Magento Tests with testRigor</h2>
+To make it even easier to get started with Magento testing, we've created a set of pre-built test cases that you can run immediately. These tests cover common Magento workflows and are available as individual public execution links below, where you can view and copy each test case to your own account.
+<h3 class="mt-20 mb-20">Quick Setup Guide</h3>
+Follow these simple steps to run the pre-built Magento tests locally:
+<h4 class="mt-15 mb-10">Step 1: Create Your testRigor Account</h4>
+<ol>
+ 	<li>Go to <a title="testRigor" href="https://www.testrigor.com/" target="_blank" rel="noopener">testRigor.com</a></li>
+ 	<li>Click "Sign Up" and select "Public Open Source" version</li>
+ 	<li>Complete registration and verify your email</li>
+ 	<li>Log in to your account</li>
+</ol>
+<h4 class="mt-15 mb-10">Step 2: Access and Copy Individual Test Cases</h4>
+Each test case has its own public execution link where you can view and copy it to your account. Click on each test case below to access it:
+<h5 class="mt-15 mb-10">Critical Test Cases Included</h5>
+The pre-built test suite includes these essential Magento workflows that every e-commerce site must have working perfectly:
+<div class="test-case-block">
+<h5>1. Customer Account Management</h5>
+<strong>Test:</strong> Create customer account and validate registration process
+
+<a title="Customer Account Creation Test" href="https://app.testrigor.com/test-suites/nQCFjMinWJbiRmHSu/test-cases/502ff857-47cc-4f18-90ef-eb4e65604d54/executions/peHqr4kT9NNTfT8Dg" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Customer registration is the foundation of any e-commerce site. If users can't create accounts, they can't save preferences, track orders, or access personalized features. This test ensures the registration form works correctly and validates user input properly.
+
+</div>
+<div class="test-case-block">
+<h5>2. Product Search Functionality</h5>
+<strong>Test:</strong> Search for products and validate search results display correctly
+
+<a title="Product Search Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/01f73e99-708a-45fe-9eb7-605d845aae4c/executions/qNTeEFqtuDY42xkao" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Search is how most customers find products. A broken search means lost sales. This test verifies that search queries return relevant results and that the search interface displays properly.
+
+</div>
+<div class="test-case-block">
+<h5>3. Complete Purchase Flow</h5>
+<strong>Test:</strong> Log in, search for item, add to cart, and complete checkout with payment
+
+<a title="Complete Purchase Flow Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/405f90a5-98af-439e-abee-fd67ad7d66f1/executions/Cu3J6Swod7z5cAjj8" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> This is the money-making flow. If checkout fails, you lose revenue. This comprehensive test validates the entire customer journey from login to order confirmation, ensuring payment processing and order management work correctly.
+
+</div>
+<div class="test-case-block">
+<h5>4. Category Navigation and Filtering</h5>
+<strong>Test:</strong> Navigate product categories and validate filtering works accurately
+
+<a title="Category Navigation Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/12e902fc-b281-4691-907f-73492bc5a81a/executions/csEkimYG3X2n2t3mm" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Category browsing is essential for product discovery. Customers need to filter by size, color, price, and other attributes. This test ensures category pages load correctly and filters return accurate results.
+
+</div>
+<div class="test-case-block">
+<h5>5. Product Configuration (Size/Color Selection)</h5>
+<strong>Test:</strong> Select product variations (size, color) and add to cart without logging in
+
+<a title="Product Configuration Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/b19251e0-a645-4ad9-b437-156be813b7e0/executions/wSM7dn8t7QiukzbpM" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Many products have variations (sizes, colors, materials). This test ensures customers can configure products correctly and that the cart handles product variations properly, even for guest users.
+
+</div>
+<div class="test-case-block">
+<h5>6. Product Detail Page Functionality</h5>
+<strong>Test:</strong> View product details including prices, sizes, colors, and image zoom
+
+<a title="Product Detail Page Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/6e63b5e3-833e-4828-94f9-2e21806a178f/executions/gj3Q6DspHeYmiEn83" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Product detail pages are where customers make purchase decisions. This test validates that all product information displays correctly, including pricing, availability, and interactive features like image zoom.
+
+</div>
+<div class="test-case-block">
+<h5>7. Wishlist Management</h5>
+<strong>Test:</strong> Add products to wishlist and verify they're saved correctly
+
+<a title="Wishlist Management Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/843327d7-8635-457b-86dd-095391bee57d/executions/G3sZAKAjPfeeiT3qi" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Wishlists increase conversion rates by allowing customers to save items for later. This test ensures the wishlist feature works properly and integrates correctly with user accounts.
+
+</div>
+<div class="test-case-block">
+<h5>8. Product Comparison</h5>
+<strong>Test:</strong> Compare multiple products and validate comparison table displays correctly
+
+<a title="Product Comparison Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/eb75de6d-a3ee-46d9-9b89-5f508d44f69e/executions/88bj2xfhhPNmC9hX9" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Product comparison helps customers make informed decisions. This test ensures the comparison feature works for multiple products and displays all relevant information in a clear format.
+
+</div>
+<div class="test-case-block">
+<h5>9. Product Reviews and Ratings</h5>
+<strong>Test:</strong> Submit product reviews with ratings and verify they display correctly
+
+<a title="Product Reviews Test" href="https://app.testrigor.com/public/nQCFjMinWJbiRmHSu/test-cases/c3d87cf5-11d7-4689-ae48-8d423c8bb8cd/executions/fiwdu3qxJxtEPF9EE" target="_blank" rel="noopener">View Test Case</a>
+
+<strong>Why it's critical:</strong> Reviews build trust and influence purchasing decisions. This test ensures the review submission process works and that reviews appear correctly on product pages, helping build customer confidence.
+
+</div>
+<strong>To run it locally, follow these steps for each test case:</strong>
+<ol>
+ 	<li>Click one of the test case links above to open it</li>
+ 	<li>Copy the test steps from the displayed test case</li>
+ 	<li>Log in to your testRigor account and create a new test case</li>
+ 	<li>Paste the copied steps into your new local test case</li>
+ 	<li>Save the test case in your test suite</li>
+ 	<li>Repeat this process for any additional test cases you want to run locally</li>
+</ol>
+<h4 class="mt-15 mb-10">Step 4: Set Up Your Local Environment</h4>
+Create a file named <code>.env</code> in your Magento project folder with these three lines:
+<pre class="mb-20">MAGENTO_TEST_SUITE_ID=your_test_suite_id_here
+MAGENTO_AUTH_TOKEN=your_auth_token_here
+MAGENTO_BASE_URL=http://localhost:8080</pre>
+<strong>Replace the values:</strong>
+<ul>
+ 	<li><code>your_test_suite_id_here</code> with the Test Suite ID you copied in Step 2</li>
+ 	<li><code>your_auth_token_here</code> with the auth token you copied in Step 3</li>
+ 	<li><code>http://localhost:8080</code> with your actual Magento website URL (e.g., <code>http://mystore.local</code> or <code>https://mystore.com</code>)</li>
+</ul>
+<h4 class="mt-15 mb-10">Step 5: Run the Tests</h4>
+Open your terminal/command prompt, navigate to your <strong>mftf</strong> project folder, and run this single command:
+<pre class="mb-20">bin/mftf run:testrigor</pre>
+That's it! The system will automatically:
+<ul>
+ 	<li>Download and install all required tools (Node.js, testRigor CLI)</li>
+ 	<li>Connect to your testRigor account</li>
+ 	<li>Run all the pre-built Magento tests against your website</li>
+ 	<li>Show you the results in your terminal</li>
+</ul>
+<h4 class="mt-15 mb-10">Step 6: View Detailed Results</h4>
+After the tests complete, you'll see a link in your terminal. Click it to open the testRigor dashboard where you can:
+<ul>
+ 	<li>See which tests passed or failed</li>
+ 	<li>View screenshots of each test step</li>
+ 	<li>Download detailed reports</li>
+ 	<li>Re-run individual tests if needed</li>
+</ul>
+<h3 class="mt-20 mb-20">Setting Up GitHub CI/CD Integration</h3>
+For automated testing in your GitHub repository, you'll need to configure your testRigor credentials as GitHub secrets. This approach differs from local testing by using GitHub's secure environment variables instead of a local <code>.env</code> file.
+<h4 class="mt-15 mb-10">Step 1: Add GitHub Secrets</h4>
+<ol>
+ 	<li>Go to your GitHub repository</li>
+ 	<li>Click on "Settings" → "Secrets and variables" → "Actions"</li>
+ 	<li><strong>Add the following:</strong>
+<ul>
+ 	<li><strong>As a <u>secret</u>:</strong>
+<ul>
+ 	<li><code>MAGENTO_AUTH_TOKEN</code>: Your testRigor auth token (keep this private)</li>
+</ul>
+</li>
+ 	<li><strong>As <u>variables</u>:</strong>
+<ul>
+ 	<li><code>MAGENTO_TEST_SUITE_ID</code>: Your testRigor Test Suite ID</li>
+ 	<li><code>MAGENTO_BASE_URL</code>: Your Magento website URL</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+For further information on creating secrets and variables in GitHub Actions, you can check the official GitHub documentation on <a title="GitHub Secrets Documentation" href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets" target="_blank" rel="noopener noreferrer">secrets</a> and <a title="GitHub Variables Documentation" href="https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-variables" target="_blank" rel="noopener noreferrer">variables</a>.
+<div class="mb-20">
+<h5>Required GitHub Secrets and Variables:</h5>
+<ul>
+ 	<li><strong>MAGENTO_TEST_SUITE_ID:</strong> Your testRigor Test Suite ID (e.g., 12345)</li>
+ 	<li><strong>MAGENTO_AUTH_TOKEN:</strong> Your testRigor auth token (format: ########-####-####-####-############)</li>
+ 	<li><strong>MAGENTO_BASE_URL:</strong> Your Magento website URL (e.g., https://yourstore.com)</li>
+</ul>
+</div>
+<h4 class="mt-15 mb-10">Step 2: Use in GitHub Actions</h4>
+In your GitHub Actions workflow file, reference these secrets like this:
+<pre class="mb-20">- name: Run testRigor Tests
+  run: bin/mftf run:testrigor
+  env:
+    MAGENTO_AUTH_TOKEN: ${{ secrets.MAGENTO_AUTH_TOKEN }}
+    MAGENTO_TEST_SUITE_ID: ${{ vars.MAGENTO_TEST_SUITE_ID }}
+    MAGENTO_BASE_URL: ${{ vars.MAGENTO_BASE_URL }}</pre>
+<strong>Key Difference:</strong> While local testing uses a <code>.env</code> file, CI/CD uses GitHub's secure secret management system, ensuring your credentials are encrypted and only accessible to authorized workflows.
+<h3 class="mt-20 mb-20">Troubleshooting Tips</h3>
+If you find any issues:
+<ul>
+ 	<li><strong>Make sure your Magento site is running</strong> and accessible at the URL you specified</li>
+ 	<li><strong>Check your .env file</strong> - ensure all three values are correct and there are no extra spaces</li>
+ 	<li><strong>Verify your testRigor account</strong> - make sure you can log in and see the test suite</li>
+ 	<li><strong>Check your internet connection</strong> - testRigor needs to download some tools on first run</li>
+</ul>
+If you need to start over, simply delete the <code>.mftf-tools</code> folder and run the command again.
+
+[text-blocks id="1575" slug="join-the-next-wave"]
+
+</div>

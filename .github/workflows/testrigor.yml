@@ -1,0 +1,239 @@
+name: testRigor E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - end-to-end-tests
+  pull_request:
+    paths:
+      - "testRigor/**"
+      - ".github/workflows/testrigor.yml"
+
+concurrency:
+  group: testrigor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  testrigor-e2e:
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/testrigor-e2e
+      NPM_CONFIG_LOGLEVEL: error
+      NPM_CONFIG_AUDIT: false
+      NPM_CONFIG_FUND: false
+      NPM_CONFIG_UPDATE_NOTIFIER: false
+      MEDUSA_BASE_URL: http://localhost:8000
+      DTC_PROJECT_DIR: ${{ github.workspace }}/../testrigor-dtc
+      REDIS_URL: redis://localhost:6379
+
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 1s
+          --health-timeout 10s
+          --health-retries 10
+        ports:
+          - 6379:6379
+
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: testrigor-e2e
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 1s
+          --health-timeout 10s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.11.1
+
+      - name: Clone DTC starter
+        working-directory: ..
+        run: |
+          git clone --depth 1 --branch ci-custom https://github.com/medusajs/dtc-starter.git testrigor-dtc
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Configure backend environment
+        working-directory: ${{ env.DTC_PROJECT_DIR }}
+        run: |
+          cp apps/backend/.env.template apps/backend/.env
+          {
+            echo "DATABASE_URL=${DATABASE_URL}"
+            echo "REDIS_URL=${REDIS_URL}"
+            echo "JWT_SECRET=supersecret"
+            echo "COOKIE_SECRET=supersecret"
+          } >> apps/backend/.env
+
+      - name: Install DTC starter dependencies
+        working-directory: ${{ env.DTC_PROJECT_DIR }}
+        run: pnpm install
+
+      - name: Run migrations
+        working-directory: ${{ env.DTC_PROJECT_DIR }}/apps/backend
+        run: npx medusa db:migrate
+
+      - name: Create admin user
+        working-directory: ${{ env.DTC_PROJECT_DIR }}/apps/backend
+        run: npx medusa user -e admin@test.com -p supersecret
+
+      - name: Configure storefront environment
+        working-directory: ${{ env.DTC_PROJECT_DIR }}
+        run: |
+          cp apps/storefront/.env.template apps/storefront/.env.local
+          PUBLISHABLE_KEY=$(psql "${DATABASE_URL}" -t -A -c "SELECT token FROM api_key WHERE type = 'publishable' LIMIT 1;")
+          if [ -z "${PUBLISHABLE_KEY}" ]; then
+            echo "No publishable API key found after migrations"
+            exit 1
+          fi
+          sed -i "s|^NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=.*|NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${PUBLISHABLE_KEY}|" apps/storefront/.env.local
+          sed -i "s|^NEXT_PUBLIC_BASE_URL=.*|NEXT_PUBLIC_BASE_URL=http://localhost:8000|" apps/storefront/.env.local
+
+      - name: Build Medusa backend for production
+        working-directory: ${{ env.DTC_PROJECT_DIR }}/apps/backend
+        env:
+          NODE_ENV: production
+        run: pnpm exec medusa build
+
+      - name: Install Medusa server production dependencies
+        working-directory: ${{ env.DTC_PROJECT_DIR }}/apps/backend/.medusa/server
+        run: |
+          cp ../../.env .env
+          npm install --omit=dev --legacy-peer-deps
+
+      - name: Start Medusa backend and storefront
+        working-directory: ${{ env.DTC_PROJECT_DIR }}
+        env:
+          NODE_ENV: development
+        run: |
+          RUNNER_TRACKING_ID="" nohup sh -c "cd '${{ env.DTC_PROJECT_DIR }}/apps/backend/.medusa/server' && HOST=0.0.0.0 NODE_ENV=production npx medusa start" > backend.log 2>&1 &
+          RUNNER_TRACKING_ID="" nohup pnpm --filter @dtc/storefront dev > storefront.log 2>&1 &
+          echo "Started backend (production on :9000) and storefront (dev on :8000) in background"
+
+      - name: Curl localhost to verify store and admin are available
+        working-directory: ${{ env.DTC_PROJECT_DIR }}
+        run: |
+          set -uo pipefail
+
+          dump_logs() {
+            echo "--- backend.log ---"
+            tail -n 100 backend.log || true
+            echo "--- storefront.log ---"
+            tail -n 100 storefront.log || true
+          }
+
+          url_is_ready() {
+            local url="$1"
+            local status final
+
+            status=$(curl -s -o /dev/null -w "%{http_code}" "${url}" || true)
+            [ "${status}" = "000" ] && return 1
+
+            if [[ "${url}" == *":9000/"* ]] && [ "${status}" = "404" ]; then
+              return 0
+            fi
+
+            if [[ "${status}" =~ ^3 ]]; then
+              final=$(curl -sL -o /dev/null -w "%{http_code}" "${url}" || true)
+              [[ "${final}" =~ ^2 ]] && return 0
+            fi
+
+            [[ "${status}" =~ ^2 ]] && return 0
+            return 1
+          }
+
+          check_url() {
+            local url="$1"
+            local label="$2"
+            local max_attempts=10
+
+            echo "Checking ${label} at ${url} (max ${max_attempts} attempts)..."
+            for i in $(seq 1 "${max_attempts}"); do
+              status=$(curl -s -o /dev/null -w "%{http_code}" "${url}" || true)
+              final=$(curl -sL -o /dev/null -w "%{http_code}" "${url}" || true)
+              echo "Attempt ${i}: GET ${url} -> HTTP ${status} (after redirects: ${final})"
+
+              if url_is_ready "${url}"; then
+                echo "${label} is available"
+                return 0
+              fi
+
+              sleep 3
+            done
+
+            echo "${label} did not become available in time"
+            dump_logs
+            return 1
+          }
+
+          check_admin_app() {
+            local url="http://localhost:9000/app"
+            local max_attempts=10
+
+            echo "Checking Medusa admin at ${url} (max ${max_attempts} attempts)..."
+            for i in $(seq 1 "${max_attempts}"); do
+              status=$(curl -s -o /dev/null -w "%{http_code}" "${url}" || true)
+              body=$(curl -s "${url}" || true)
+              echo "Attempt ${i}: GET ${url} -> HTTP ${status}"
+
+              if [[ "${status}" =~ ^2 ]] && echo "${body}" | grep -qi "medusa"; then
+                echo "Medusa admin is available (production build, single port :9000)"
+                return 0
+              fi
+
+              sleep 3
+            done
+
+            echo "Medusa admin did not become available in time"
+            dump_logs
+            return 1
+          }
+
+          check_url "http://localhost:9000/" "Medusa backend"
+          check_admin_app
+          check_url "http://localhost:8000/" "Medusa storefront"
+          echo "Backend, admin, and storefront are ready — running testRigor tests next."
+
+      - name: Run testRigor tests
+        env:
+          MEDUSA_AUTH_TOKEN: ${{ secrets.MEDUSA_AUTH_TOKEN }}
+          MEDUSA_TEST_SUITE_ID: ${{ vars.MEDUSA_TEST_SUITE_ID }}
+        run: |
+          if [ -z "${MEDUSA_AUTH_TOKEN}" ] || [ -z "${MEDUSA_TEST_SUITE_ID}" ]; then
+            echo "::error::Configure MEDUSA_AUTH_TOKEN (secret) and MEDUSA_TEST_SUITE_ID (variable) in repository settings."
+            exit 1
+          fi
+
+          npm install -g @testrigor/testrigor-cli
+          testrigor test-suite run "${MEDUSA_TEST_SUITE_ID}" \
+            --token "${MEDUSA_AUTH_TOKEN}" \
+            --localhost \
+            --url "${MEDUSA_BASE_URL}" \
+            --test-cases-path testRigor/testcases
+
+      - name: Stop servers
+        if: always()
+        run: |
+          kill -9 $(lsof -t -i :9000) 2>/dev/null || true
+          kill -9 $(lsof -t -i :8000) 2>/dev/null || true
