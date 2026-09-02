@@ -303,7 +303,31 @@ jobs:
             --localhost \
             --url "${MEDUSA_BASE_URL}" \
             --variables-path "${RUNNER_TEMP}/testrigor-variables.json" \
-            --test-cases-path "testRigor/testcases/**/*.{txt,yaml}"
+            --test-cases-path "testRigor/testcases/**/*.{txt,yaml}" \
+            --junit-report-save-path "${RUNNER_TEMP}/testrigor-junit.xml"
+
+      - name: Report testRigor results
+        if: always()
+        run: |
+          # The CLI only prints "Run failed" on failure, so surface the JUnit
+          # report to see which test case broke and on which step.
+          report="${RUNNER_TEMP}/testrigor-junit.xml"
+
+          if [ ! -f "${report}" ]; then
+            echo "No JUnit report was produced by the testRigor CLI."
+            exit 0
+          fi
+
+          echo "--- testRigor JUnit report ---"
+          cat "${report}"
+
+      - name: Upload testRigor JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testrigor-junit-report
+          path: ${{ runner.temp }}/testrigor-junit.xml
+          if-no-files-found: ignore
 
       - name: Stop servers
         if: always()
