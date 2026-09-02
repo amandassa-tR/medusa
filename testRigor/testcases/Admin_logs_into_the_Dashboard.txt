@@ -1,0 +1,8 @@
+go to url stored value "adminUrl"
+check that page contains text "Welcome to Medusa"
+enter stored value "adminEmail" into "Email"
+enter stored value "adminPassword" into "Password"
+click "Continue with Email"
+check that page contains text "Orders"
+check that page contains text stored value "adminEmail"
+take screenshot

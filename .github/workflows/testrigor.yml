@@ -23,6 +23,9 @@ jobs:
       NPM_CONFIG_FUND: false
       NPM_CONFIG_UPDATE_NOTIFIER: false
       MEDUSA_BASE_URL: http://localhost:8000
+      MEDUSA_ADMIN_URL: http://localhost:9000/app
+      MEDUSA_ADMIN_EMAIL: admin@test.com
+      MEDUSA_ADMIN_PASSWORD: supersecret
       DTC_PROJECT_DIR: ${{ github.workspace }}/../testrigor-dtc
       REDIS_URL: redis://localhost:6379
 
@@ -86,6 +89,37 @@ jobs:
             echo "COOKIE_SECRET=supersecret"
           } >> apps/backend/.env
 
+      - name: Enable the Medusa admin dashboard
+        working-directory: ${{ env.DTC_PROJECT_DIR }}
+        run: |
+          set -euo pipefail
+
+          config="apps/backend/medusa-config.ts"
+
+          # The DTC starter ships with `admin: { disable: true }`. With that flag
+          # `medusa build` logs "Skipping admin build" and the server answers 404
+          # on /app, so testRigor can never reach the dashboard. Flip it so the
+          # dashboard is bundled into the backend build and served on :9000/app.
+          occurrences=$(grep -c "disable: true" "${config}" || true)
+
+          if [ "${occurrences}" -eq 0 ]; then
+            if grep -q "disable: false" "${config}"; then
+              echo "Admin dashboard is already enabled in ${config}"
+              exit 0
+            fi
+            echo "::error::Could not find the admin 'disable' flag in ${config}"
+            exit 1
+          fi
+
+          if [ "${occurrences}" -ne 1 ]; then
+            echo "::error::Expected exactly one 'disable: true' in ${config}, found ${occurrences}"
+            exit 1
+          fi
+
+          sed -i "s/disable: true/disable: false/" "${config}"
+          echo "Admin dashboard enabled:"
+          cat "${config}"
+
       - name: Install DTC starter dependencies
         working-directory: ${{ env.DTC_PROJECT_DIR }}
         run: pnpm install
@@ -96,7 +130,7 @@ jobs:
 
       - name: Create admin user
         working-directory: ${{ env.DTC_PROJECT_DIR }}/apps/backend
-        run: npx medusa user -e admin@test.com -p supersecret
+        run: npx medusa user -e "${MEDUSA_ADMIN_EMAIL}" -p "${MEDUSA_ADMIN_PASSWORD}"
 
       - name: Configure storefront environment
         working-directory: ${{ env.DTC_PROJECT_DIR }}
@@ -114,7 +148,24 @@ jobs:
         working-directory: ${{ env.DTC_PROJECT_DIR }}/apps/backend
         env:
           NODE_ENV: production
-        run: pnpm exec medusa build
+          # The dashboard defaults to cookie-based session auth, but with
+          # NODE_ENV=production the express session cookie is flagged `Secure`
+          # and is therefore never set over the plain-HTTP tunnel testRigor
+          # runs through, so logging in would silently bounce back to /login.
+          # Bundling the dashboard with JWT auth keeps the token in
+          # localStorage and sends it as a bearer header instead.
+          ADMIN_AUTH_TYPE: jwt
+        run: |
+          set -euo pipefail
+          pnpm exec medusa build
+
+          # Fail fast with a clear message instead of letting the /app health
+          # check below spin for 30s on 404s.
+          if [ ! -f .medusa/server/public/admin/index.html ]; then
+            echo "::error::'medusa build' did not produce an admin bundle at .medusa/server/public/admin"
+            exit 1
+          fi
+          echo "Admin bundle built at .medusa/server/public/admin"
 
       - name: Install Medusa server production dependencies
         working-directory: ${{ env.DTC_PROJECT_DIR }}/apps/backend/.medusa/server
@@ -215,6 +266,25 @@ jobs:
           check_url "http://localhost:8000/" "Medusa storefront"
           echo "Backend, admin, and storefront are ready — running testRigor tests next."
 
+      - name: Prepare testRigor variables
+        run: |
+          set -euo pipefail
+
+          # testRigor's tunnel is an HTTP proxy back into this runner, so test
+          # cases can reach any local port. The suite's base URL points at the
+          # storefront, so the admin URL is handed over as a stored value that
+          # admin test cases navigate to.
+          cat > "${RUNNER_TEMP}/testrigor-variables.json" <<EOF
+          {
+            "storefrontUrl": "${MEDUSA_BASE_URL}",
+            "adminUrl": "${MEDUSA_ADMIN_URL}",
+            "adminEmail": "${MEDUSA_ADMIN_EMAIL}",
+            "adminPassword": "${MEDUSA_ADMIN_PASSWORD}"
+          }
+          EOF
+
+          echo "Wrote testRigor variables: storefrontUrl=${MEDUSA_BASE_URL} adminUrl=${MEDUSA_ADMIN_URL} adminEmail=${MEDUSA_ADMIN_EMAIL} adminPassword=***"
+
       - name: Run testRigor tests
         env:
           MEDUSA_AUTH_TOKEN: ${{ secrets.MEDUSA_AUTH_TOKEN }}
@@ -226,11 +296,14 @@ jobs:
           fi
 
           npm install -g @testrigor/testrigor-cli
+          # --test-cases-path is globbed, so it has to match files: a bare
+          # directory matches only the directory itself and uploads nothing.
           testrigor test-suite run "${MEDUSA_TEST_SUITE_ID}" \
             --token "${MEDUSA_AUTH_TOKEN}" \
             --localhost \
             --url "${MEDUSA_BASE_URL}" \
-            --test-cases-path testRigor/testcases
+            --variables-path "${RUNNER_TEMP}/testrigor-variables.json" \
+            --test-cases-path "testRigor/testcases/**/*.{txt,yaml}"
 
       - name: Stop servers
         if: always()
